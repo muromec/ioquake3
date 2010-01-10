@@ -1,0 +1,12 @@
+NOTE: I've only built ioquake3 in the scratchbox2 build environment, as shown here:
+http://www.webos-internals.org/wiki/WebOS_Internals_PDK
+
+To build, simply type "make".
+
+For faster builds, I recommend setting BUILD_GAME_SO to 0 in the Makefile.local file.
+
+Run "make copyfiles" if you want to create a basic game directory structure. Modify the "COPYDIR" variable in Makefile.local to specify where to copy it to. Then, copy over the demo pk3's inside the baseq3 directory. 
+
+To run ioquake3, type "./ioquake3.arm +set fs_game baseq3 +set sv_pure 0 +set vm_cgame 0 +set vm_game 0 +set vm_ui 0"
+
+To search for any changes made so far in the code, search for "WEBOS".
