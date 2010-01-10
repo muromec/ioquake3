@@ -423,7 +423,7 @@ void nanoGL_Destroy()
 {
 	if (glEsImpl)
 	{
-		free(glEsImpl)
+		free(glEsImpl);
 		glEsImpl = NULL;
 	}
 	if (glesLib)
