@@ -770,9 +770,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 	// Ok, let's do the player loop, hand out the bonuses
 	for (i = 0; i < g_maxclients.integer; i++) {
 		player = &g_entities[i];
-
-		// also make sure we don't award assist bonuses to the flag carrier himself.
-		if (!player->inuse || player == other)
+		if (!player->inuse)
 			continue;
 
 		if (player->client->sess.sessionTeam !=
@@ -977,7 +975,7 @@ qboolean Team_GetLocationMsg(gentity_t *ent, char *loc, int loclen)
 
 /*
 ================
-SelectRandomTeamSpawnPoint
+SelectRandomDeathmatchSpawnPoint
 
 go to a random point that doesn't telefrag
 ================
@@ -1033,13 +1031,13 @@ SelectCTFSpawnPoint
 
 ============
 */
-gentity_t *SelectCTFSpawnPoint ( team_t team, int teamstate, vec3_t origin, vec3_t angles, qboolean isbot ) {
+gentity_t *SelectCTFSpawnPoint ( team_t team, int teamstate, vec3_t origin, vec3_t angles ) {
 	gentity_t	*spot;
 
 	spot = SelectRandomTeamSpawnPoint ( teamstate, team );
 
 	if (!spot) {
-		return SelectSpawnPoint( vec3_origin, origin, angles, isbot );
+		return SelectSpawnPoint( vec3_origin, origin, angles );
 	}
 
 	VectorCopy (spot->s.origin, origin);

@@ -1,0 +1,10 @@
+void GLimp_Init(void);
+void GLimp_LogComment(char *comment);
+void GLimp_EndFrame(void);
+void GLimp_Shutdown(void);
+void GLimp_SetGamma(unsigned char red[256], unsigned char green[256], unsigned char blue[256]);
+qboolean GLimp_SpawnRenderThread(void (*function) (void));
+void GLimp_FrontEndSleep(void);
+void *GLimp_RendererSleep(void);
+void GLimp_RenderThreadWrapper(void *data);
+void GLimp_WakeRenderer(void *data);

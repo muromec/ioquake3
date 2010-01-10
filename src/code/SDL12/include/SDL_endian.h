@@ -1,6 +1,6 @@
 /*
     SDL - Simple DirectMedia Layer
-    Copyright (C) 1997-2009 Sam Lantinga
+    Copyright (C) 1997-2006 Sam Lantinga
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -20,23 +20,16 @@
     slouken@libsdl.org
 */
 
-/**
- *  @file SDL_endian.h
- *  Functions for reading and writing endian-specific values
- */
+/* Functions for reading and writing endian-specific values */
 
 #ifndef _SDL_endian_h
 #define _SDL_endian_h
 
 #include "SDL_stdinc.h"
 
-/** @name SDL_ENDIANs
- *  The two types of endianness 
- */
-/*@{*/
+/* The two types of endianness */
 #define SDL_LIL_ENDIAN	1234
 #define SDL_BIG_ENDIAN	4321
-/*@}*/
 
 #ifndef SDL_BYTEORDER	/* Not defined in SDL_config.h? */
 #if defined(__hppa__) || \
@@ -57,16 +50,13 @@
 extern "C" {
 #endif
 
-/**
- *  @name SDL_Swap Functions
- *  Use inline functions for compilers that support them, and static
- *  functions for those that do not.  Because these functions become
- *  static for compilers that do not support inline functions, this
- *  header should only be included in files that actually use them.
- */
-/*@{*/
+/* Use inline functions for compilers that support them, and static
+   functions for those that do not.  Because these functions become
+   static for compilers that do not support inline functions, this
+   header should only be included in files that actually use them.
+*/
 #if defined(__GNUC__) && defined(__i386__) && \
-   !(__GNUC__ == 2 && __GNUC_MINOR__ <= 95 /* broken gcc version */)
+   !(__GNUC__ == 2 && __GNUC_MINOR__ == 95 /* broken gcc version */)
 static __inline__ Uint16 SDL_Swap16(Uint16 x)
 {
 	__asm__("xchgb %b0,%h0" : "=q" (x) :  "0" (x));
@@ -98,8 +88,7 @@ static __inline__ Uint16 SDL_Swap16(Uint16 x) {
 }
 #endif
 
-#if defined(__GNUC__) && defined(__i386__) && \
-   !(__GNUC__ == 2 && __GNUC_MINOR__ <= 95 /* broken gcc version */)
+#if defined(__GNUC__) && defined(__i386__)
 static __inline__ Uint32 SDL_Swap32(Uint32 x)
 {
 	__asm__("bswap %0" : "=r" (x) : "0" (x));
@@ -134,8 +123,7 @@ static __inline__ Uint32 SDL_Swap32(Uint32 x) {
 #endif
 
 #ifdef SDL_HAS_64BIT_TYPE
-#if defined(__GNUC__) && defined(__i386__) && \
-   !(__GNUC__ == 2 && __GNUC_MINOR__ <= 95 /* broken gcc version */)
+#if defined(__GNUC__) && defined(__i386__)
 static __inline__ Uint64 SDL_Swap64(Uint64 x)
 {
 	union { 
@@ -160,9 +148,9 @@ static __inline__ Uint64 SDL_Swap64(Uint64 x)
 	Uint32 hi, lo;
 
 	/* Separate into high and low 32-bit values and swap them */
-	lo = SDL_static_cast(Uint32, x & 0xFFFFFFFF);
+	lo = (Uint32)(x&0xFFFFFFFF);
 	x >>= 32;
-	hi = SDL_static_cast(Uint32, x & 0xFFFFFFFF);
+	hi = (Uint32)(x&0xFFFFFFFF);
 	x = SDL_Swap32(lo);
 	x <<= 32;
 	x |= SDL_Swap32(hi);
@@ -171,18 +159,14 @@ static __inline__ Uint64 SDL_Swap64(Uint64 x)
 #endif
 #else
 /* This is mainly to keep compilers from complaining in SDL code.
- * If there is no real 64-bit datatype, then compilers will complain about
- * the fake 64-bit datatype that SDL provides when it compiles user code.
- */
+   If there is no real 64-bit datatype, then compilers will complain about
+   the fake 64-bit datatype that SDL provides when it compiles user code.
+*/
 #define SDL_Swap64(X)	(X)
 #endif /* SDL_HAS_64BIT_TYPE */
-/*@}*/
 
-/**
- *  @name SDL_SwapLE and SDL_SwapBE Functions
- *  Byteswap item from the specified endianness to the native endianness
- */
-/*@{*/
+
+/* Byteswap item from the specified endianness to the native endianness */
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
 #define SDL_SwapLE16(X)	(X)
 #define SDL_SwapLE32(X)	(X)
@@ -198,7 +182,6 @@ static __inline__ Uint64 SDL_Swap64(Uint64 x)
 #define SDL_SwapBE32(X)	(X)
 #define SDL_SwapBE64(X)	(X)
 #endif
-/*@}*/
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus

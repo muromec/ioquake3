@@ -339,8 +339,6 @@ rescan:
 		// clear notify lines and outgoing commands before passing
 		// the restart to the cgame
 		Con_ClearNotify();
-		// reparse the string, because Con_ClearNotify() may have done another Cmd_TokenizeString()
-		Cmd_TokenizeString( s );
 		Com_Memset( cl.cmds, 0, sizeof( cl.cmds ) );
 		return qtrue;
 	}
@@ -414,6 +412,11 @@ CL_CgameSystemCalls
 The cgame module is making a system call
 ====================
 */
+
+#ifndef WEBOS
+qboolean IN_MotionPressed( void );
+#endif
+
 intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 	switch( args[0] ) {
 	case CG_PRINT:
@@ -467,7 +470,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		Cmd_RemoveCommand( VMA(1) );
 		return 0;
 	case CG_SENDCLIENTCOMMAND:
-		CL_AddReliableCommand(VMA(1), qfalse);
+		CL_AddReliableCommand( VMA(1) );
 		return 0;
 	case CG_UPDATESCREEN:
 		// this is used during lengthy level loading, so pump message loop
@@ -698,6 +701,17 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return re.GetEntityToken( VMA(1), args[2] );
 	case CG_R_INPVS:
 		return re.inPVS( VMA(1), VMA(2) );
+
+#ifndef WEBOS
+	case CG_AIM_EVENT:
+		//CL_MouseEvent(args[1], args[2], args[3]);
+		cl.viewangles[YAW] += args[1];
+		cl.viewangles[PITCH] += args[2];
+		return 0;
+
+	case CG_IN_MOTION_PRESSED:
+		return IN_MotionPressed();
+#endif
 
 	default:
 	        assert(0);

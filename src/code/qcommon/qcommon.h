@@ -76,7 +76,6 @@ void MSG_WriteFloat (msg_t *sb, float f);
 void MSG_WriteString (msg_t *sb, const char *s);
 void MSG_WriteBigString (msg_t *sb, const char *s);
 void MSG_WriteAngle16 (msg_t *sb, float f);
-int MSG_HashKey(const char *string, int maxlen);
 
 void	MSG_BeginReading (msg_t *sb);
 void	MSG_BeginReadingOOB(msg_t *sb);
@@ -122,14 +121,6 @@ NET
 ==============================================================
 */
 
-#define NET_ENABLEV4            0x01
-#define NET_ENABLEV6            0x02
-// if this flag is set, always attempt ipv6 connections instead of ipv4 if a v6 address is found.
-#define NET_PRIOV6              0x04
-// disables ipv6 multicast support if set.
-#define NET_DISABLEMCAST        0x08
-
-
 #define	PACKET_BACKUP	32	// number of old messages that must be kept on client and
 							// server for delta comrpession and ping estimation
 #define	PACKET_MASK		(PACKET_BACKUP-1)
@@ -141,8 +132,8 @@ NET
 #define	MAX_RELIABLE_COMMANDS	64			// max string commands buffered for restransmit
 
 typedef enum {
-	NA_BAD = 0,					// an address lookup failed
 	NA_BOT,
+	NA_BAD,					// an address lookup failed
 	NA_LOOPBACK,
 	NA_BROADCAST,
 	NA_IP,
@@ -169,7 +160,7 @@ typedef struct {
 
 void		NET_Init( void );
 void		NET_Shutdown( void );
-void		NET_Restart_f( void );
+void		NET_Restart( void );
 void		NET_Config( qboolean enableNetworking );
 void		NET_FlushPacketQueue(void);
 void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to);
@@ -545,7 +536,6 @@ char	*Cvar_InfoString_Big( int bit );
 void	Cvar_InfoStringBuffer( int bit, char *buff, int buffsize );
 void Cvar_CheckRange( cvar_t *cv, float minVal, float maxVal, qboolean shouldBeIntegral );
 
-void	Cvar_Restart(qboolean unsetVM);
 void	Cvar_Restart_f( void );
 
 void Cvar_CompleteCvarName( char *args, int argNum );
@@ -604,9 +594,7 @@ void	FS_FreeFileList( char **list );
 
 qboolean FS_FileExists( const char *file );
 
-qboolean FS_CreatePath (char *OSPath);
 char   *FS_BuildOSPath( const char *base, const char *game, const char *qpath );
-qboolean FS_CompareZipChecksum(const char *zipfile);
 
 int		FS_LoadStack( void );
 
@@ -771,7 +759,8 @@ typedef enum {
 	SE_NONE = 0,	// evTime is still valid
 	SE_KEY,		// evValue is a key code, evValue2 is the down flag
 	SE_CHAR,	// evValue is an ascii char
-	SE_MOUSE,	// evValue and evValue2 are reletive signed x / y moves
+	SE_MOUSE,	// evValue and evValue2 are relative signed x / y moves
+	SE_ACCEL,
 	SE_JOYSTICK_AXIS,	// evValue is an axis number and evValue2 is the current state (-127 to 127)
 	SE_CONSOLE,	// evPtr is a char*
 	SE_PACKET	// evPtr is a netadr_t followed by data bytes to evPtrLength
@@ -798,11 +787,11 @@ void 		QDECL Com_Printf( const char *fmt, ... ) __attribute__ ((format (printf, 
 void 		QDECL Com_DPrintf( const char *fmt, ... ) __attribute__ ((format (printf, 1, 2)));
 void 		QDECL Com_Error( int code, const char *fmt, ... ) __attribute__ ((format (printf, 2, 3)));
 void 		Com_Quit_f( void );
-void		Com_GameRestart(int checksumFeed, qboolean clientRestart);
 
 int			Com_Milliseconds( void );	// will be journaled properly
 unsigned	Com_BlockChecksum( const void *buffer, int length );
 char		*Com_MD5File(const char *filename, int length, const char *prefix, int prefix_len);
+int			Com_HashKey(char *string, int maxlen);
 int			Com_Filter(char *filter, char *name, int casesensitive);
 int			Com_FilterPath(char *filter, char *name, int casesensitive);
 int			Com_RealTime(qtime_t *qtime);
@@ -946,6 +935,7 @@ void CL_CharEvent( int key );
 // char events are for field typing, not game control
 
 void CL_MouseEvent( int dx, int dy, int time );
+void CL_AccelEvent( int dx, int dy, int time );
 
 void CL_JoystickEvent( int axis, int value, int time );
 
@@ -975,9 +965,6 @@ void CL_FlushMemory( void );
 
 void CL_StartHunkUsers( qboolean rendererOnly );
 // start all the client stuff using the hunk
-
-void CL_Snd_Restart(void);
-// Restart sound subsystem
 
 void Key_KeynameCompletion( void(*callback)(const char *s) );
 // for keyname autocompletion
@@ -1076,7 +1063,7 @@ qboolean	Sys_StringToAdr( const char *s, netadr_t *a, netadrtype_t family );
 qboolean	Sys_IsLANAddress (netadr_t adr);
 void		Sys_ShowIP(void);
 
-qboolean Sys_Mkdir( const char *path );
+void	Sys_Mkdir( const char *path );
 char	*Sys_Cwd( void );
 void	Sys_SetDefaultInstallPath(const char *path);
 char	*Sys_DefaultInstallPath(void);
@@ -1096,8 +1083,6 @@ void	Sys_FreeFileList( char **list );
 void	Sys_Sleep(int msec);
 
 qboolean Sys_LowPhysicalMemory( void );
-
-void Sys_SetEnv(const char *name, const char *value);
 
 /* This is based on the Adaptive Huffman algorithm described in Sayood's Data
  * Compression book.  The ranks are not actually stored, but implicitly defined

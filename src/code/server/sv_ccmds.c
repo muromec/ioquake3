@@ -278,15 +278,6 @@ static void SV_MapRestart_f( void ) {
 	sv.serverId = com_frameTime;
 	Cvar_Set( "sv_serverid", va("%i", sv.serverId ) );
 
-	// if a map_restart occurs while a client is changing maps, we need
-	// to give them the correct time so that when they finish loading
-	// they don't violate the backwards time check in cl_cgame.c
-	for (i=0 ; i<sv_maxclients->integer ; i++) {
-		if (svs.clients[i].state == CS_PRIMED) {
-			svs.clients[i].oldServerTime = sv.restartTime;
-		}
-	}
-
 	// reset all the vm data in place without changing memory allocation
 	// note that we do NOT set sv.state = SS_LOADING, so configstrings that
 	// had been changed from their default values will generate broadcast updates
@@ -723,7 +714,6 @@ Ban a user from being able to play on this server based on his ip address.
 static void SV_AddBanToList(qboolean isexception)
 {
 	char *banstring;
-	char addy2[NET_ADDRSTRMAXLEN];
 	netadr_t ip;
 	int index, argc, mask;
 	serverBan_t *curban;
@@ -809,11 +799,9 @@ static void SV_AddBanToList(qboolean isexception)
 		{
 			if((curban->isexception || !isexception) && NET_CompareBaseAdrMask(curban->ip, ip, curban->subnet))
 			{
-				Q_strncpyz(addy2, NET_AdrToString(ip), sizeof(addy2));
-				
 				Com_Printf("Error: %s %s/%d supersedes %s %s/%d\n", curban->isexception ? "Exception" : "Ban",
 					   NET_AdrToString(curban->ip), curban->subnet,
-					   isexception ? "exception" : "ban", addy2, mask);
+					   isexception ? "exception" : "ban", NET_AdrToString(ip), mask);
 				return;
 			}
 		}
@@ -821,11 +809,9 @@ static void SV_AddBanToList(qboolean isexception)
 		{
 			if(!curban->isexception && isexception && NET_CompareBaseAdrMask(curban->ip, ip, mask))
 			{
-				Q_strncpyz(addy2, NET_AdrToString(curban->ip), sizeof(addy2));
-			
 				Com_Printf("Error: %s %s/%d supersedes already existing %s %s/%d\n", isexception ? "Exception" : "Ban",
 					   NET_AdrToString(ip), mask,
-					   curban->isexception ? "exception" : "ban", addy2, curban->subnet);
+					   curban->isexception ? "exception" : "ban", NET_AdrToString(curban->ip), curban->subnet);
 				return;
 			}
 		}

@@ -45,6 +45,8 @@ cvar_t	*r_ignoreFastPath;
 cvar_t	*r_verbose;
 cvar_t	*r_ignore;
 
+cvar_t	*r_displayRefresh;
+
 cvar_t	*r_detailTextures;
 
 cvar_t	*r_znear;
@@ -100,7 +102,6 @@ cvar_t	*r_depthbits;
 cvar_t	*r_colorbits;
 cvar_t	*r_primitives;
 cvar_t	*r_texturebits;
-cvar_t  *r_ext_multisample;
 
 cvar_t	*r_drawBuffer;
 cvar_t	*r_lightmap;
@@ -133,7 +134,6 @@ cvar_t	*r_subdivisions;
 cvar_t	*r_lodCurveError;
 
 cvar_t	*r_fullscreen;
-cvar_t  *r_noborder;
 
 cvar_t	*r_customwidth;
 cvar_t	*r_customheight;
@@ -154,12 +154,17 @@ cvar_t	*r_debugSort;
 cvar_t	*r_printShaders;
 cvar_t	*r_saveFontData;
 
-cvar_t	*r_marksOnTriangleMeshes;
-
 cvar_t	*r_maxpolys;
 int		max_polys;
 cvar_t	*r_maxpolyverts;
 int		max_polyverts;
+
+void (APIENTRY * qglMultiTexCoord2fARB) (GLenum texture, GLfloat s, GLfloat t);
+void (APIENTRY * qglActiveTextureARB) (GLenum texture);
+void (APIENTRY * qglClientActiveTextureARB) (GLenum texture);
+
+void (APIENTRY * qglLockArraysEXT) (GLint, GLint);
+void (APIENTRY * qglUnlockArraysEXT) (void);
 
 /*
 ** InitOpenGL
@@ -189,7 +194,7 @@ static void InitOpenGL( void )
 		GLint		temp;
 		
 		GLimp_Init();
-		
+
 		strcpy( renderer_buffer, glConfig.renderer_string );
 		Q_strlwr( renderer_buffer );
 
@@ -520,7 +525,7 @@ void R_LevelShot( void ) {
 	float		xScale, yScale;
 	int			xx, yy;
 
-	Com_sprintf(checkname, sizeof(checkname), "levelshots/%s.tga", tr.world->baseName);
+	sprintf( checkname, "levelshots/%s.tga", tr.world->baseName );
 
 	source = ri.Hunk_AllocateTempMemory( glConfig.vidWidth * glConfig.vidHeight * 3 );
 
@@ -737,11 +742,11 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 */
 void GL_SetDefaultState( void )
 {
-	qglClearDepth( 1.0f );
+	qglClearDepthf( 1.0f );
 
 	qglCullFace(GL_FRONT);
 
-	qglColor4f (1,1,1,1);
+	glColor4f (1,1,1,1);
 
 	// initialize downstream texture unit if we're running
 	// in a multitexture environment
@@ -769,7 +774,9 @@ void GL_SetDefaultState( void )
 	//
 	glState.glStateBits = GLS_DEPTHTEST_DISABLE | GLS_DEPTHMASK_TRUE;
 
+#if !defined(NOKIA)
 	qglPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
+#endif
 	qglDepthMask( GL_TRUE );
 	qglDisable( GL_DEPTH_TEST );
 	qglEnable( GL_SCISSOR_TEST );
@@ -902,13 +909,10 @@ void R_Register( void )
 	r_colorbits = ri.Cvar_Get( "r_colorbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_stencilbits = ri.Cvar_Get( "r_stencilbits", "8", CVAR_ARCHIVE | CVAR_LATCH );
 	r_depthbits = ri.Cvar_Get( "r_depthbits", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	r_ext_multisample = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE | CVAR_LATCH );
-	ri.Cvar_CheckRange( r_ext_multisample, 0, 4, qtrue );
 	r_overBrightBits = ri.Cvar_Get ("r_overBrightBits", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ignorehwgamma = ri.Cvar_Get( "r_ignorehwgamma", "0", CVAR_ARCHIVE | CVAR_LATCH);
 	r_mode = ri.Cvar_Get( "r_mode", "3", CVAR_ARCHIVE | CVAR_LATCH );
 	r_fullscreen = ri.Cvar_Get( "r_fullscreen", "1", CVAR_ARCHIVE );
-	r_noborder = Cvar_Get("r_noborder", "0", CVAR_ARCHIVE);
 	r_customwidth = ri.Cvar_Get( "r_customwidth", "1600", CVAR_ARCHIVE | CVAR_LATCH );
 	r_customheight = ri.Cvar_Get( "r_customheight", "1024", CVAR_ARCHIVE | CVAR_LATCH );
 	r_customPixelAspect = ri.Cvar_Get( "r_customPixelAspect", "1", CVAR_ARCHIVE | CVAR_LATCH );
@@ -924,6 +928,8 @@ void R_Register( void )
 	//
 	// temporary latched variables that can only change over a restart
 	//
+	r_displayRefresh = ri.Cvar_Get( "r_displayRefresh", "0", CVAR_LATCH );
+	ri.Cvar_CheckRange( r_displayRefresh, 0, 200, qtrue );
 	r_fullbright = ri.Cvar_Get ("r_fullbright", "0", CVAR_LATCH|CVAR_CHEAT );
 	r_mapOverBrightBits = ri.Cvar_Get ("r_mapOverBrightBits", "2", CVAR_LATCH );
 	r_intensity = ri.Cvar_Get ("r_intensity", "1", CVAR_LATCH );
@@ -1009,8 +1015,6 @@ void R_Register( void )
 	r_noportals = ri.Cvar_Get ("r_noportals", "0", CVAR_CHEAT);
 	r_shadows = ri.Cvar_Get( "cg_shadows", "1", 0 );
 
-	r_marksOnTriangleMeshes = ri.Cvar_Get("r_marksOnTriangleMeshes", "0", CVAR_ARCHIVE);
-
 	r_maxpolys = ri.Cvar_Get( "r_maxpolys", va("%d", MAX_POLYS), 0);
 	r_maxpolyverts = ri.Cvar_Get( "r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
 
@@ -1042,7 +1046,7 @@ void R_Init( void ) {
 	Com_Memset( &tr, 0, sizeof( tr ) );
 	Com_Memset( &backEnd, 0, sizeof( backEnd ) );
 	Com_Memset( &tess, 0, sizeof( tess ) );
-	
+
 	if(sizeof(glconfig_t) != 11332)
 	{
 		ri.Error( ERR_FATAL, "Mod ABI incompatible: sizeof(glconfig_t) == %zd != 11332", sizeof(glconfig_t));
@@ -1081,21 +1085,21 @@ void R_Init( void ) {
 			tr.triangleTable[i] = -tr.triangleTable[i-FUNCTABLE_SIZE/2];
 		}
 	}
-	
+
 	R_InitFogTable();
-	
+
 	R_NoiseInit();
-	
+
 	R_Register();
-	
+
 	max_polys = r_maxpolys->integer;
 	if (max_polys < MAX_POLYS)
 		max_polys = MAX_POLYS;
-	
+
 	max_polyverts = r_maxpolyverts->integer;
 	if (max_polyverts < MAX_POLYVERTS)
 		max_polyverts = MAX_POLYVERTS;
-	
+
 	ptr = ri.Hunk_Alloc( sizeof( *backEndData[0] ) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low);
 	backEndData[0] = (backEndData_t *) ptr;
 	backEndData[0]->polys = (srfPoly_t *) ((char *) ptr + sizeof( *backEndData[0] ));
@@ -1108,19 +1112,20 @@ void R_Init( void ) {
 	} else {
 		backEndData[1] = NULL;
 	}
-		R_ToggleSmpFrame();
-	
+	R_ToggleSmpFrame();
+
 	InitOpenGL();
-	
+
 	R_InitImages();
-	
+
 	R_InitShaders();
-	
+
 	R_InitSkins();
-	
+
 	R_ModelInit();
-	
+
 	R_InitFreeType();
+
 
 	err = qglGetError();
 	if ( err != GL_NO_ERROR )

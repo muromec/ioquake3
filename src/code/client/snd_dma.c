@@ -33,6 +33,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "snd_codec.h"
 #include "client.h"
 
+void S_Play_f(void);
+void S_SoundList_f(void);
+void S_Music_f(void);
+
 void S_Update_( void );
 void S_Base_StopAllSounds(void);
 void S_Base_StopBackgroundTrack( void );
@@ -912,7 +916,7 @@ void S_ByteSwapRawSamples( int samples, int width, int s_channels, const byte *d
 
 /*
 ============
-S_Base_RawSamples
+S_RawSamples
 
 Music streaming
 ============
@@ -933,13 +937,10 @@ void S_Base_RawSamples( int stream, int samples, int rate, int width, int s_chan
 	}
 	rawsamples = s_rawsamples[stream];
 
-	if(s_muted->integer)
-		intVolume = 0;
-	else
-		intVolume = 256 * volume * s_volume->value;
+	intVolume = 256 * volume;
 
 	if ( s_rawend[stream] < s_soundtime ) {
-		Com_DPrintf( "S_Base_RawSamples: resetting minimum: %i < %i\n", s_rawend[stream], s_soundtime );
+		Com_DPrintf( "S_RawSamples: resetting minimum: %i < %i\n", s_rawend[stream], s_soundtime );
 		s_rawend[stream] = s_soundtime;
 	}
 
@@ -1017,7 +1018,7 @@ void S_Base_RawSamples( int stream, int samples, int rate, int width, int s_chan
 	}
 
 	if ( s_rawend[stream] > s_soundtime + MAX_RAW_SAMPLES ) {
-		Com_DPrintf( "S_Base_RawSamples: overflowed %i > %i\n", s_rawend[stream], s_soundtime );
+		Com_DPrintf( "S_RawSamples: overflowed %i > %i\n", s_rawend[stream], s_soundtime );
 	}
 }
 
@@ -1311,9 +1312,7 @@ void S_Base_StartBackgroundTrack( const char *intro, const char *loop ){
 	}
 	Com_DPrintf( "S_StartBackgroundTrack( %s, %s )\n", intro, loop );
 
-	if(!*intro)
-	{
-		S_Base_StopBackgroundTrack();
+	if ( !intro[0] ) {
 		return;
 	}
 
@@ -1354,13 +1353,17 @@ void S_UpdateBackgroundTrack( void ) {
 	byte	raw[30000];		// just enough to fit in a mac stack frame
 	int		fileBytes;
 	int		r;
+	static	float	musicVolume = 0.5f;
 
 	if(!s_backgroundStream) {
 		return;
 	}
 
+	// graeme see if this is OK
+	musicVolume = (musicVolume + (s_musicVolume->value * 2))/4.0f;
+
 	// don't bother playing anything if musicvolume is 0
-	if ( s_musicVolume->value <= 0 ) {
+	if ( musicVolume <= 0 ) {
 		return;
 	}
 
@@ -1374,9 +1377,6 @@ void S_UpdateBackgroundTrack( void ) {
 
 		// decide how much data needs to be read from the file
 		fileSamples = bufferSamples * s_backgroundStream->info.rate / dma.speed;
-
-		if (!fileSamples)
-			return;
 
 		// our max buffer size
 		fileBytes = fileSamples * (s_backgroundStream->info.width * s_backgroundStream->info.channels);
@@ -1397,7 +1397,7 @@ void S_UpdateBackgroundTrack( void ) {
 		{
 			// add to raw buffer
 			S_Base_RawSamples( 0, fileSamples, s_backgroundStream->info.rate,
-				s_backgroundStream->info.width, s_backgroundStream->info.channels, raw, s_musicVolume->value );
+				s_backgroundStream->info.width, s_backgroundStream->info.channels, raw, musicVolume );
 		}
 		else
 		{

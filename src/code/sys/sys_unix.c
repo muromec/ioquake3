@@ -35,9 +35,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/time.h>
 #include <pwd.h>
 #include <libgen.h>
-#include <fcntl.h>
-
-qboolean stdinIsATTY;
 
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
@@ -57,11 +54,18 @@ char *Sys_DefaultHomePath(void)
 		{
 			Q_strncpyz( homePath, p, sizeof( homePath ) );
 #ifdef MACOS_X
-			Q_strcat( homePath, sizeof( homePath ),
-					"/Library/Application Support/Quake3" );
+			Q_strcat( homePath, sizeof( homePath ), "/Library/Application Support/Quake3" );
 #else
 			Q_strcat( homePath, sizeof( homePath ), "/.q3a" );
 #endif
+			if( mkdir( homePath, 0777 ) )
+			{
+				if( errno != EEXIST )
+				{
+					Sys_Error( "Unable to create directory \"%s\", error is %s(%d)\n",
+							homePath, strerror( errno ), errno );
+				}
+			}
 		}
 	}
 
@@ -213,14 +217,9 @@ const char *Sys_Dirname( char *path )
 Sys_Mkdir
 ==================
 */
-qboolean Sys_Mkdir( const char *path )
+void Sys_Mkdir( const char *path )
 {
-	int result = mkdir( path, 0750 );
-
-	if( result != 0 )
-		return errno == EEXIST;
-
-	return qtrue;
+	mkdir( path, 0777 );
 }
 
 /*
@@ -356,7 +355,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 	}
 
 	extLen = strlen( extension );
-
+	
 	// search
 	nfiles = 0;
 
@@ -466,35 +465,24 @@ Block execution for msec or until input is recieved.
 */
 void Sys_Sleep( int msec )
 {
+	fd_set fdset;
+
 	if( msec == 0 )
 		return;
 
-	if( stdinIsATTY )
+	FD_ZERO(&fdset);
+	FD_SET(fileno(stdin), &fdset);
+	if( msec < 0 )
 	{
-		fd_set fdset;
-
-		FD_ZERO(&fdset);
-		FD_SET(STDIN_FILENO, &fdset);
-		if( msec < 0 )
-		{
-			select(STDIN_FILENO + 1, &fdset, NULL, NULL, NULL);
-		}
-		else
-		{
-			struct timeval timeout;
-
-			timeout.tv_sec = msec/1000;
-			timeout.tv_usec = (msec%1000)*1000;
-			select(STDIN_FILENO + 1, &fdset, NULL, NULL, &timeout);
-		}
+		select((fileno(stdin) + 1), &fdset, NULL, NULL, NULL);
 	}
 	else
 	{
-		// With nothing to select() on, we can't wait indefinitely
-		if( msec < 0 )
-			msec = 10;
+		struct timeval timeout;
 
-		usleep( msec * 1000 );
+		timeout.tv_sec = msec/1000;
+		timeout.tv_usec = (msec%1000)*1000;
+		select((fileno(stdin) + 1), &fdset, NULL, NULL, &timeout);
 	}
 }
 
@@ -509,58 +497,23 @@ void Sys_ErrorDialog( const char *error )
 {
 	char buffer[ 1024 ];
 	unsigned int size;
-	int f = -1;
-	const char *homepath = Cvar_VariableString( "fs_homepath" );
-	const char *gamedir = Cvar_VariableString( "fs_gamedir" );
+	fileHandle_t f;
 	const char *fileName = "crashlog.txt";
-	char *ospath = FS_BuildOSPath( homepath, gamedir, fileName );
 
 	Sys_Print( va( "%s\n", error ) );
 
-#if defined(MACOS_X) && !DEDICATED
-	/* This function has to be in a separate file, compiled as Objective-C. */
-	extern void Cocoa_MsgBox( const char *text );
-	if (!com_dedicated || !com_dedicated->integer)
-		Cocoa_MsgBox(error);
-#endif
-
-	/* make sure the write path for the crashlog exists... */
-	if( FS_CreatePath( ospath ) ) {
-		Com_Printf( "ERROR: couldn't create path '%s' for crash log.\n", ospath );
-		return;
-	}
-
-	/* we might be crashing because we maxed out the Quake MAX_FILE_HANDLES,
-	   which will come through here, so we don't want to recurse forever by
-	   calling FS_FOpenFileWrite()...use the Unix system APIs instead. */
-	f = open(ospath, O_CREAT | O_TRUNC | O_WRONLY, 0640);
-	if( f == -1 )
+	// Write console log to file
+	f = FS_FOpenFileWrite( fileName );
+	if( !f )
 	{
 		Com_Printf( "ERROR: couldn't open %s\n", fileName );
 		return;
 	}
 
-	/* We're crashing, so we don't care much if write() or close() fails. */
-	while( ( size = CON_LogRead( buffer, sizeof( buffer ) ) ) > 0 ) {
-		if (write( f, buffer, size ) != size) {
-			Com_Printf( "ERROR: couldn't fully write to %s\n", fileName );
-			break;
-		}
-	}
+	while( ( size = CON_LogRead( buffer, sizeof( buffer ) ) ) > 0 )
+		FS_Write( buffer, size, f );
 
-	close(f);
-}
-
-/*
-==============
-Sys_GLimpSafeInit
-
-Unix specific "safe" GL implementation initialisation
-==============
-*/
-void Sys_GLimpSafeInit( void )
-{
-	// NOP
+	FS_FCloseFile( f );
 }
 
 /*
@@ -584,30 +537,9 @@ Unix specific initialisation
 */
 void Sys_PlatformInit( void )
 {
-	const char* term = getenv( "TERM" );
-
 	signal( SIGHUP, Sys_SigHandler );
 	signal( SIGQUIT, Sys_SigHandler );
 	signal( SIGTRAP, Sys_SigHandler );
 	signal( SIGIOT, Sys_SigHandler );
 	signal( SIGBUS, Sys_SigHandler );
-
-	stdinIsATTY = isatty( STDIN_FILENO ) &&
-		!( term && ( !strcmp( term, "raw" ) || !strcmp( term, "dumb" ) ) );
-}
-
-/*
-==============
-Sys_SetEnv
-
-set/unset environment variables (empty value removes it)
-==============
-*/
-
-void Sys_SetEnv(const char *name, const char *value)
-{
-	if(value && *value)
-		setenv(name, value, 1);
-	else
-		unsetenv(name);
 }

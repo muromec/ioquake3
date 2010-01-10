@@ -175,24 +175,28 @@ void R_ImageList_f( void ) {
 		case 4:
 			ri.Printf( PRINT_ALL, "RGBA " );
 			break;
+#if !defined(NOKIA)
 		case GL_RGBA8:
 			ri.Printf( PRINT_ALL, "RGBA8" );
 			break;
 		case GL_RGB8:
 			ri.Printf( PRINT_ALL, "RGB8" );
 			break;
+#endif
 		case GL_RGB4_S3TC:
-		#ifndef WEBOS
+#if !defined(NOKIA)
 		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-		#endif
+#endif
 			ri.Printf( PRINT_ALL, "S3TC " );
 			break;
+#if !defined(NOKIA)
 		case GL_RGBA4:
 			ri.Printf( PRINT_ALL, "RGBA4" );
 			break;
 		case GL_RGB5:
 			ri.Printf( PRINT_ALL, "RGB5 " );
 			break;
+#endif
 		default:
 			ri.Printf( PRINT_ALL, "???? " );
 		}
@@ -562,6 +566,7 @@ static void Upload32( unsigned *data,
 	scan = ((byte *)data);
 	samples = 3;
 
+#if !defined(NOKIA)
 	if(lightMap)
 	{
 		if(r_greyscale->integer)
@@ -570,8 +575,11 @@ static void Upload32( unsigned *data,
 			internalFormat = GL_RGB;
 	}
 	else
+#else
+	if(!lightMap)
+#endif
 	{
-		for ( i = 0; i < c; i++ ) // ALIMARK
+		for ( i = 0; i < c; i++ )
 		{
 			if ( scan[i*4+0] > rMax )
 			{
@@ -594,6 +602,7 @@ static void Upload32( unsigned *data,
 		// select proper internal format
 		if ( samples == 3 )
 		{
+#if !defined(NOKIA)
 			if(r_greyscale->integer)
 			{
 				if(r_texturebits->integer == 16)
@@ -605,12 +614,6 @@ static void Upload32( unsigned *data,
 			}
 			else
 			{
-				#ifdef WEBOS
-				if ( glConfig.textureCompression == TC_S3TC )
-				{
-					internalFormat = GL_RGB4_S3TC;
-				}
-				#else
 				if ( glConfig.textureCompression == TC_S3TC_ARB )
 				{
 					internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
@@ -619,7 +622,6 @@ static void Upload32( unsigned *data,
 				{
 					internalFormat = GL_RGB4_S3TC;
 				}
-				#endif /* WEBOS */
 				else if ( r_texturebits->integer == 16 )
 				{
 					internalFormat = GL_RGB5;
@@ -633,9 +635,13 @@ static void Upload32( unsigned *data,
 					internalFormat = GL_RGB;
 				}
 			}
+#else
+			internalFormat = GL_RGBA;
+#endif
 		}
 		else if ( samples == 4 )
 		{
+#if !defined(NOKIA)
 			if(r_greyscale->integer)
 			{
 				if(r_texturebits->integer == 16)
@@ -660,6 +666,9 @@ static void Upload32( unsigned *data,
 					internalFormat = GL_RGBA;
 				}
 			}
+#else
+			internalFormat = GL_RGBA;
+#endif
 		}
 	}
 
@@ -729,21 +738,21 @@ done:
 
 	if (mipmap)
 	{
-		#ifndef WEBOS
+#if !defined(NOKIA)
 		if ( textureFilterAnisotropic )
 			qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
 					(GLint)Com_Clamp( 1, maxAnisotropy, r_ext_max_anisotropy->integer ) );
-		#endif /* WEBOS */
+#endif
 
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
 	}
 	else
 	{
-		#ifndef WEBOS
+#if !defined(NOKIA)
 		if ( textureFilterAnisotropic )
 			qglTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1 );
-		#endif /* WEBOS */
+#endif
 
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -1087,7 +1096,9 @@ static void R_CreateFogImage( void ) {
 	byte	*data;
 	float	g;
 	float	d;
+#if !defined(NOKIA)
 	float	borderColor[4];
+#endif
 
 	data = ri.Hunk_AllocateTempMemory( FOG_S * FOG_T * 4 );
 
@@ -1110,12 +1121,14 @@ static void R_CreateFogImage( void ) {
 	tr.fogImage = R_CreateImage("*fog", (byte *)data, FOG_S, FOG_T, qfalse, qfalse, GL_CLAMP_TO_EDGE );
 	ri.Hunk_FreeTempMemory( data );
 
+#if !defined(NOKIA)
 	borderColor[0] = 1.0;
 	borderColor[1] = 1.0;
 	borderColor[2] = 1.0;
 	borderColor[3] = 1;
 
 	qglTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
+#endif
 }
 
 /*

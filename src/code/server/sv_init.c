@@ -104,7 +104,7 @@ SV_SetConfigstring
 ===============
 */
 void SV_SetConfigstring (int index, const char *val) {
-	int		i;
+	int		len, i;
 	client_t	*client;
 
 	if ( index < 0 || index >= MAX_CONFIGSTRINGS ) {
@@ -140,6 +140,8 @@ void SV_SetConfigstring (int index, const char *val) {
 				continue;
 			}
 		
+
+			len = strlen( val );
 			SV_SendConfigstring(client, index);
 		}
 	}
@@ -473,6 +475,7 @@ void SV_SpawnServer( char *server, qboolean killBots ) {
 	Cvar_Set("cl_paused", "0");
 
 	// get a new checksum feed and restart the file system
+	srand(Com_Milliseconds());
 	sv.checksumFeed = ( ((int) rand() << 16) ^ rand() ) ^ Com_Milliseconds();
 	FS_Restart( sv.checksumFeed );
 

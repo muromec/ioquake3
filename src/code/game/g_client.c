@@ -140,7 +140,7 @@ go to a random point that doesn't telefrag
 ================
 */
 #define	MAX_SPAWN_POINTS	128
-gentity_t *SelectRandomDeathmatchSpawnPoint(qboolean isbot) {
+gentity_t *SelectRandomDeathmatchSpawnPoint( void ) {
 	gentity_t	*spot;
 	int			count;
 	int			selection;
@@ -149,19 +149,11 @@ gentity_t *SelectRandomDeathmatchSpawnPoint(qboolean isbot) {
 	count = 0;
 	spot = NULL;
 
-	while((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL && count < MAX_SPAWN_POINTS)
-	{
-		if(SpotWouldTelefrag(spot))
-			continue;
-
-		if(((spot->flags & FL_NO_BOTS) && isbot) ||
-		   ((spot->flags & FL_NO_HUMANS) && !isbot))
-		{
-			// spot is not for this human/bot player
+	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL) {
+		if ( SpotWouldTelefrag( spot ) ) {
 			continue;
 		}
-
-		spots[count] = spot;
+		spots[ count ] = spot;
 		count++;
 	}
 
@@ -180,68 +172,49 @@ SelectRandomFurthestSpawnPoint
 Chooses a player start, deathmatch start, etc
 ============
 */
-gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, vec3_t angles, qboolean isbot ) {
+gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, vec3_t angles ) {
 	gentity_t	*spot;
 	vec3_t		delta;
 	float		dist;
-	float		list_dist[MAX_SPAWN_POINTS];
-	gentity_t	*list_spot[MAX_SPAWN_POINTS];
+	float		list_dist[64];
+	gentity_t	*list_spot[64];
 	int			numSpots, rnd, i, j;
 
 	numSpots = 0;
 	spot = NULL;
 
-	while((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL)
-	{
-		if(SpotWouldTelefrag(spot))
-			continue;
-
-		if(((spot->flags & FL_NO_BOTS) && isbot) ||
-		   ((spot->flags & FL_NO_HUMANS) && !isbot))
-		{
-			// spot is not for this human/bot player
+	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL) {
+		if ( SpotWouldTelefrag( spot ) ) {
 			continue;
 		}
-
 		VectorSubtract( spot->s.origin, avoidPoint, delta );
 		dist = VectorLength( delta );
-
-		for (i = 0; i < numSpots; i++)
-		{
-			if(dist > list_dist[i])
-			{
-				if (numSpots >= MAX_SPAWN_POINTS)
-					numSpots = MAX_SPAWN_POINTS - 1;
-					
-				for(j = numSpots; j > i; j--)
-				{
+		for (i = 0; i < numSpots; i++) {
+			if ( dist > list_dist[i] ) {
+				if ( numSpots >= 64 )
+					numSpots = 64-1;
+				for (j = numSpots; j > i; j--) {
 					list_dist[j] = list_dist[j-1];
 					list_spot[j] = list_spot[j-1];
 				}
-				
 				list_dist[i] = dist;
 				list_spot[i] = spot;
-				
 				numSpots++;
+				if (numSpots > 64)
+					numSpots = 64;
 				break;
 			}
 		}
-		
-		if(i >= numSpots && numSpots < MAX_SPAWN_POINTS)
-		{
+		if (i >= numSpots && numSpots < 64) {
 			list_dist[numSpots] = dist;
 			list_spot[numSpots] = spot;
 			numSpots++;
 		}
 	}
-	
-	if(!numSpots)
-	{
-		spot = G_Find(NULL, FOFS(classname), "info_player_deathmatch");
-
+	if (!numSpots) {
+		spot = G_Find( NULL, FOFS(classname), "info_player_deathmatch");
 		if (!spot)
 			G_Error( "Couldn't find a spawn point" );
-
 		VectorCopy (spot->s.origin, origin);
 		origin[2] += 9;
 		VectorCopy (spot->s.angles, angles);
@@ -265,8 +238,8 @@ SelectSpawnPoint
 Chooses a player start, deathmatch start, etc
 ============
 */
-gentity_t *SelectSpawnPoint ( vec3_t avoidPoint, vec3_t origin, vec3_t angles, qboolean isbot ) {
-	return SelectRandomFurthestSpawnPoint( avoidPoint, origin, angles, isbot );
+gentity_t *SelectSpawnPoint ( vec3_t avoidPoint, vec3_t origin, vec3_t angles ) {
+	return SelectRandomFurthestSpawnPoint( avoidPoint, origin, angles );
 
 	/*
 	gentity_t	*spot;
@@ -305,25 +278,19 @@ Try to find a spawn point marked 'initial', otherwise
 use normal spawn selection.
 ============
 */
-gentity_t *SelectInitialSpawnPoint( vec3_t origin, vec3_t angles, qboolean isbot ) {
+gentity_t *SelectInitialSpawnPoint( vec3_t origin, vec3_t angles ) {
 	gentity_t	*spot;
 
 	spot = NULL;
-	
-	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL)
-	{
-		if(((spot->flags & FL_NO_BOTS) && isbot) ||
-		   ((spot->flags & FL_NO_HUMANS) && !isbot))
-		{
-			continue;
-		}
-		
-		if((spot->spawnflags & 0x01))
+	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL) {
+		if ( spot->spawnflags & 1 ) {
 			break;
+		}
 	}
 
-	if (!spot || SpotWouldTelefrag(spot))
-		return SelectSpawnPoint(vec3_origin, origin, angles, isbot);
+	if ( !spot || SpotWouldTelefrag( spot ) ) {
+		return SelectSpawnPoint( vec3_origin, origin, angles );
+	}
 
 	VectorCopy (spot->s.origin, origin);
 	origin[2] += 9;
@@ -640,59 +607,85 @@ static void ForceClientSkin( gclient_t *client, char *model, const char *skin ) 
 ClientCheckName
 ============
 */
-static void ClientCleanName(const char *in, char *out, int outSize)
-{
-	int outpos = 0, colorlessLen = 0, spaces = 0;
+static void ClientCleanName( const char *in, char *out, int outSize ) {
+	int		len, colorlessLen;
+	char	ch;
+	char	*p;
+	int		spaces;
 
-	// discard leading spaces
-	for(; *in == ' '; in++);
-	
-	for(; *in && outpos < outSize - 1; in++)
-	{
-		out[outpos] = *in;
+	//save room for trailing null byte
+	outSize--;
 
-		if(*in == ' ')
-		{
-			// don't allow too many consecutive spaces
-			if(spaces > 2)
+	len = 0;
+	colorlessLen = 0;
+	p = out;
+	*p = 0;
+	spaces = 0;
+
+	while( 1 ) {
+		ch = *in++;
+		if( !ch ) {
+			break;
+		}
+
+		// don't allow leading spaces
+		if( colorlessLen == 0 && ch == ' ' ) {
+			continue;
+		}
+
+		// check colors
+		if( ch == Q_COLOR_ESCAPE ) {
+			// solo trailing carat is not a color prefix
+			if( !*in ) {
+				break;
+			}
+
+			// don't allow black in a name, period
+			if( ColorIndex(*in) == 0 ) {
+				in++;
 				continue;
-			
-			spaces++;
-		}
-		else if(outpos > 0 && out[outpos - 1] == Q_COLOR_ESCAPE)
-		{
-			if(Q_IsColorString(&out[outpos - 1]))
-			{
-				colorlessLen--;
-				
-				if(ColorIndex(*in) == 0)
-				{
-					// Disallow color black in names to prevent players
-					// from getting advantage playing in front of black backgrounds
-					outpos--;
-					continue;
-				}
 			}
-			else
-			{
-				spaces = 0;
-				colorlessLen++;
-			}
-		}
-		else
-		{
-			spaces = 0;
-			colorlessLen++;
-		}
-		
-		outpos++;
-	}
 
-	out[outpos] = '\0';
+			// make sure room in dest for both chars
+			if( len > outSize - 2 ) {
+				break;
+			}
+
+			*out++ = ch;
+			*out++ = *in++;
+			len += 2;
+			continue;
+		}
+
+		// don't allow too many consecutive spaces
+		// don't count spaces in colorlessLen
+		if( ch == ' ' ) {
+			spaces++;
+			if( spaces > 3 ) {
+				continue;
+			}
+			*out++ = ch;
+			len++;
+			continue;
+		}
+		else {
+			spaces = 0;
+		}
+
+		if( len > outSize - 1 ) {
+			break;
+		}
+
+		*out++ = ch;
+		colorlessLen++;
+		len++;
+	}
+	*out = 0;
 
 	// don't allow empty names
-	if( *out == '\0' || colorlessLen == 0)
-		Q_strncpyz(out, "UnnamedPlayer", outSize );
+	if( *p == 0 || colorlessLen == 0 ) {
+		Q_strncpyz( p, "UnnamedPlayer", outSize );
+	}
 }
 
 
@@ -720,7 +713,6 @@ void ClientUserinfoChanged( int clientNum ) {
 	char	redTeam[MAX_INFO_STRING];
 	char	blueTeam[MAX_INFO_STRING];
 	char	userinfo[MAX_INFO_STRING];
-	char    guid[MAX_INFO_STRING];
 
 	ent = g_entities + clientNum;
 	client = ent->client;
@@ -871,21 +863,17 @@ void ClientUserinfoChanged( int clientNum ) {
 
 	strcpy(redTeam, Info_ValueForKey( userinfo, "g_redteam" ));
 	strcpy(blueTeam, Info_ValueForKey( userinfo, "g_blueteam" ));
-	strcpy(guid, Info_ValueForKey(userinfo, "cl_guid"));
-	
+
 	// send over a subset of the userinfo keys so other clients can
 	// print scoreboards, display models, and play custom sounds
-	if (ent->r.svFlags & SVF_BOT)
-	{
+	if ( ent->r.svFlags & SVF_BOT ) {
 		s = va("n\\%s\\t\\%i\\model\\%s\\hmodel\\%s\\c1\\%s\\c2\\%s\\hc\\%i\\w\\%i\\l\\%i\\skill\\%s\\tt\\%d\\tl\\%d",
 			client->pers.netname, team, model, headModel, c1, c2, 
 			client->pers.maxHealth, client->sess.wins, client->sess.losses,
 			Info_ValueForKey( userinfo, "skill" ), teamTask, teamLeader );
-	}
-	else
-	{
-		s = va("n\\%s\\guid\\%s\\t\\%i\\model\\%s\\hmodel\\%s\\g_redteam\\%s\\g_blueteam\\%s\\c1\\%s\\c2\\%s\\hc\\%i\\w\\%i\\l\\%i\\tt\\%d\\tl\\%d",
-			client->pers.netname, guid, client->sess.sessionTeam, model, headModel, redTeam, blueTeam, c1, c2, 
+	} else {
+		s = va("n\\%s\\t\\%i\\model\\%s\\hmodel\\%s\\g_redteam\\%s\\g_blueteam\\%s\\c1\\%s\\c2\\%s\\hc\\%i\\w\\%i\\l\\%i\\tt\\%d\\tl\\%d",
+			client->pers.netname, client->sess.sessionTeam, model, headModel, redTeam, blueTeam, c1, c2, 
 			client->pers.maxHealth, client->sess.wins, client->sess.losses, teamTask, teamLeader);
 	}
 
@@ -1083,8 +1071,6 @@ void ClientSpawn(gentity_t *ent) {
 	index = ent - g_entities;
 	client = ent->client;
 
-	VectorClear(spawn_origin);
-
 	// find a spawn point
 	// do it before setting health back up, so farthest
 	// ranging doesn't count this client
@@ -1096,25 +1082,33 @@ void ClientSpawn(gentity_t *ent) {
 		spawnPoint = SelectCTFSpawnPoint ( 
 						client->sess.sessionTeam, 
 						client->pers.teamState.state, 
-						spawn_origin, spawn_angles,
-						!!(ent->r.svFlags & SVF_BOT));
-	}
-	else
-	{
-		// the first spawn should be at a good looking spot
-		if ( !client->pers.initialSpawn && client->pers.localClient )
-		{
-			client->pers.initialSpawn = qtrue;
-			spawnPoint = SelectInitialSpawnPoint(spawn_origin, spawn_angles,
-							     !!(ent->r.svFlags & SVF_BOT));
-		}
-		else
-		{
-			// don't spawn near existing origin if possible
-			spawnPoint = SelectSpawnPoint ( 
-				client->ps.origin, 
-				spawn_origin, spawn_angles, !!(ent->r.svFlags & SVF_BOT));
-		}
+						spawn_origin, spawn_angles);
+	} else {
+		do {
+			// the first spawn should be at a good looking spot
+			if ( !client->pers.initialSpawn && client->pers.localClient ) {
+				client->pers.initialSpawn = qtrue;
+				spawnPoint = SelectInitialSpawnPoint( spawn_origin, spawn_angles );
+			} else {
+				// don't spawn near existing origin if possible
+				spawnPoint = SelectSpawnPoint ( 
+					client->ps.origin, 
+					spawn_origin, spawn_angles);
+			}
+
+			// Tim needs to prevent bots from spawning at the initial point
+			// on q3dm0...
+			if ( ( spawnPoint->flags & FL_NO_BOTS ) && ( ent->r.svFlags & SVF_BOT ) ) {
+				continue;	// try again
+			}
+			// just to be symetric, we have a nohumans option...
+			if ( ( spawnPoint->flags & FL_NO_HUMANS ) && !( ent->r.svFlags & SVF_BOT ) ) {
+				continue;	// try again
+			}
+
+			break;
+
+		} while ( 1 );
 	}
 	client->pers.teamState.state = TEAM_ACTIVE;
 

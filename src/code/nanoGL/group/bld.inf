@@ -1,9 +1,0 @@
-PRJ_MMPFILES
-
-nanoGL.mmp
-
-PRJ_EXPORTS
-
-..\inc\gl.h                 \epoc32\include\gl\gl.h
-..\inc\egl.h                \epoc32\include\gl\egl.h
-..\inc\nanogl.h             \epoc32\include\nanogl.h

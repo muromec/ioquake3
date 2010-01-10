@@ -1,6 +1,6 @@
 /*
     SDL - Simple DirectMedia Layer
-    Copyright (C) 1997-2009 Sam Lantinga
+    Copyright (C) 1997-2006 Sam Lantinga
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -20,10 +20,7 @@
     slouken@libsdl.org
 */
 
-/**
- *  @file SDL_active.h
- *  Include file for SDL application focus event handling 
- */
+/* Include file for SDL application focus event handling */
 
 #ifndef _SDL_active_h
 #define _SDL_active_h
@@ -37,15 +34,13 @@
 extern "C" {
 #endif
 
-/** @name The available application states */
-/*@{*/
-#define SDL_APPMOUSEFOCUS	0x01		/**< The app has mouse coverage */
-#define SDL_APPINPUTFOCUS	0x02		/**< The app has input focus */
-#define SDL_APPACTIVE		0x04		/**< The application is active */
-/*@}*/
+/* The available application states */
+#define SDL_APPMOUSEFOCUS	0x01		/* The app has mouse coverage */
+#define SDL_APPINPUTFOCUS	0x02		/* The app has input focus */
+#define SDL_APPACTIVE		0x04		/* The application is active */
 
 /* Function prototypes */
-/** 
+/* 
  * This function returns the current state of the application, which is a
  * bitwise combination of SDL_APPMOUSEFOCUS, SDL_APPINPUTFOCUS, and
  * SDL_APPACTIVE.  If SDL_APPACTIVE is set, then the user is able to

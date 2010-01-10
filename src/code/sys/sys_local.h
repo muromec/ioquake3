@@ -26,13 +26,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // Require a minimum version of SDL
 #define MINSDL_MAJOR 1
 #define MINSDL_MINOR 2
-#define MINSDL_PATCH 10
+#define MINSDL_PATCH 7
 
 // Input subsystem
 void IN_Init( void );
 void IN_Frame( void );
 void IN_Shutdown( void );
 void IN_Restart( void );
+qboolean IN_MotionPressed( void );
 
 // Console
 void CON_Shutdown( void );
@@ -48,7 +49,6 @@ unsigned int CON_LogRead( char *out, unsigned int outSize );
 char *Sys_StripAppBundle( char *pwd );
 #endif
 
-void Sys_GLimpSafeInit( void );
 void Sys_GLimpInit( void );
 void Sys_PlatformInit( void );
 void Sys_SigHandler( int signal );

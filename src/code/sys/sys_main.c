@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <ctype.h>
 #include <errno.h>
 
+#if !defined(NOKIA)
 #ifndef DEDICATED
 #ifdef USE_LOCAL_HEADERS
 #	include "SDL.h"
@@ -38,6 +39,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #else
 #	include <SDL.h>
 #	include <SDL_cpuinfo.h>
+#endif
 #endif
 #endif
 
@@ -138,8 +140,10 @@ void Sys_Exit( int ex )
 {
 	CON_Shutdown( );
 
+#if !defined(NOKIA)
 #ifndef DEDICATED
 	SDL_Quit( );
+#endif
 #endif
 
 #ifdef NDEBUG
@@ -171,6 +175,7 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 {
 	cpuFeatures_t features = 0;
 
+#if !defined(NOKIA)
 #ifndef DEDICATED
 	if( SDL_HasRDTSC( ) )    features |= CF_RDTSC;
 	if( SDL_HasMMX( ) )      features |= CF_MMX;
@@ -180,6 +185,7 @@ cpuFeatures_t Sys_GetProcessorFeatures( void )
 	if( SDL_HasSSE( ) )      features |= CF_SSE;
 	if( SDL_HasSSE2( ) )     features |= CF_SSE2;
 	if( SDL_HasAltiVec( ) )  features |= CF_ALTIVEC;
+#endif
 #endif
 
 	return features;
@@ -381,8 +387,9 @@ static void* Sys_TryLibraryLoad(const char* base, const char* gamedir, const cha
 Sys_LoadDll
 
 Used to load a development dll instead of a virtual machine
-#1 look in fs_homepath
-#2 look in fs_basepath
+#1 look down current path
+#2 look in fs_homepath
+#3 look in fs_basepath
 =================
 */
 void *Sys_LoadDll( const char *name, char *fqpath ,
@@ -394,6 +401,7 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	char  fname[MAX_OSPATH];
 	char  *basepath;
 	char  *homepath;
+	char  *pwdpath;
 	char  *gamedir;
 
 	assert( name );
@@ -401,11 +409,15 @@ void *Sys_LoadDll( const char *name, char *fqpath ,
 	Q_snprintf (fname, sizeof(fname), "%s" ARCH_STRING DLL_EXT, name);
 
 	// TODO: use fs_searchpaths from files.c
+	pwdpath = Sys_Cwd();
 	basepath = Cvar_VariableString( "fs_basepath" );
 	homepath = Cvar_VariableString( "fs_homepath" );
 	gamedir = Cvar_VariableString( "fs_game" );
 
-	libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
+	libHandle = Sys_TryLibraryLoad(pwdpath, gamedir, fname, fqpath);
+
+	if(!libHandle && homepath)
+		libHandle = Sys_TryLibraryLoad(homepath, gamedir, fname, fqpath);
 
 	if(!libHandle && basepath)
 		libHandle = Sys_TryLibraryLoad(basepath, gamedir, fname, fqpath);
@@ -500,6 +512,7 @@ int main( int argc, char **argv )
 	int   i;
 	char  commandLine[ MAX_STRING_CHARS ] = { 0 };
 
+#if !defined(NOKIA)
 #ifndef DEDICATED
 	// SDL version check
 
@@ -523,6 +536,7 @@ int main( int argc, char **argv )
 		Sys_Exit( 1 );
 	}
 #endif
+#endif
 
 	Sys_PlatformInit( );
 
@@ -536,15 +550,7 @@ int main( int argc, char **argv )
 	// Concatenate the command line for passing to Com_Init
 	for( i = 1; i < argc; i++ )
 	{
-		const qboolean containsSpaces = strchr(argv[i], ' ') != NULL;
-		if (containsSpaces)
-			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
-
 		Q_strcat( commandLine, sizeof( commandLine ), argv[ i ] );
-
-		if (containsSpaces)
-			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
-
 		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 
@@ -557,10 +563,18 @@ int main( int argc, char **argv )
 	signal( SIGFPE, Sys_SigHandler );
 	signal( SIGSEGV, Sys_SigHandler );
 	signal( SIGTERM, Sys_SigHandler );
-	signal( SIGINT, Sys_SigHandler );
 
 	while( 1 )
 	{
+#if !defined(NOKIA)
+#ifndef DEDICATED
+		int appState = SDL_GetAppState( );
+
+		Cvar_SetValue( "com_unfocused",	!( appState & SDL_APPINPUTFOCUS ) );
+		Cvar_SetValue( "com_minimized", !( appState & SDL_APPACTIVE ) );
+#endif
+#endif
+
 		IN_Frame( );
 		Com_Frame( );
 	}

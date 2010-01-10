@@ -198,7 +198,7 @@ This is the only way control passes into the module.
 This must be the very first function compiled into the .q3vm file
 ================
 */
-Q_EXPORT intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11  ) {
+intptr_t vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11  ) {
 	switch ( command ) {
 	case GAME_INIT:
 		G_InitGame( arg0, arg1, arg2 );
@@ -934,7 +934,7 @@ void FindIntermissionPoint( void ) {
 	// find the intermission spot
 	ent = G_Find (NULL, FOFS(classname), "info_player_intermission");
 	if ( !ent ) {	// the map creator forgot to put in an intermission point...
-		SelectSpawnPoint ( vec3_origin, level.intermission_origin, level.intermission_angle, qfalse );
+		SelectSpawnPoint ( vec3_origin, level.intermission_origin, level.intermission_angle );
 	} else {
 		VectorCopy (ent->s.origin, level.intermission_origin);
 		VectorCopy (ent->s.angles, level.intermission_angle);
