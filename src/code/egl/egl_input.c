@@ -537,18 +537,25 @@ static void HandleEvents(void)
 
 		case MotionNotify:
 			t = Sys_XTimeToSysTime(event.xkey.time);
-			dx = event.xmotion.x;
-			dy = event.xmotion.y;
+
+			dx = event.xmotion.x - mwx;
+			dy = event.xmotion.y - mwy;
+
+			if(!dx && !dy)
+				break;
+
+			Com_QueueEvent(t, SE_MOUSE, dx, dy, 0, NULL);
+
+			XWarpPointer(dpy, NULL, win, 0, 0, 0, 0, mwx, mwy);
+
 			break;
 
 		case ButtonPress:
 		case ButtonRelease:
 			t = Sys_XTimeToSysTime(event.xkey.time);
 			motionPressed = (qboolean) (event.type == ButtonPress);
-			if (Key_GetCatcher() & (KEYCATCH_CGAME | KEYCATCH_UI)) {
-				Com_QueueEvent(t, SE_KEY, K_MOUSE1,
-					       motionPressed, 0, NULL);
-			}
+			Com_QueueEvent(t, SE_KEY, K_MOUSE1, motionPressed, 0, NULL);
+
 			break;
 
 		case CreateNotify:
@@ -561,10 +568,6 @@ static void HandleEvents(void)
 			win_y = event.xconfigure.y;
 			break;
 		}
-	}
-
-	if (motionPressed) {
-		Com_QueueEvent(t, SE_MOUSE, dx, dy, 0, NULL);
 	}
 
 	Proximity_HandleEvents();

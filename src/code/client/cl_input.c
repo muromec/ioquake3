@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "client.h"
 
+
 unsigned	frame_msec;
 int			old_com_frameTime;
 
@@ -374,8 +375,8 @@ void CL_MouseEvent( int dx, int dy, int time ) {
 	} else if (Key_GetCatcher( ) & KEYCATCH_CGAME) {
 		VM_Call (cgvm, CG_MOUSE_EVENT, dx, dy);
 	} else {
-		cl.mouseDx[cl.mouseIndex] += (dx - cls.glconfig.vidWidth / 2) * cl_sensitivity->value;
-		cl.mouseDy[cl.mouseIndex] += (dy - cls.glconfig.vidHeight / 2) * cl_sensitivity->value;
+		cl.mouseDx[cl.mouseIndex] += dx;
+		cl.mouseDy[cl.mouseIndex] += dy;
 	}
 }
 
