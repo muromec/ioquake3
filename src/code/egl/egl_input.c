@@ -60,8 +60,6 @@ static int win_x, win_y;
 ** you can turn on some debugging and verbose of the keyboard code with #define KBD_DBG
 ******************************************************************************/
 
-#define KBD_DBG
-
 static char *XLateKey(XKeyEvent * ev, int *key)
 {
 	static char buf[64];
@@ -552,9 +550,9 @@ static void HandleEvents(void)
 
 		case ButtonPress:
 		case ButtonRelease:
-			t = Sys_XTimeToSysTime(event.xkey.time);
+			t = Sys_XTimeToSysTime(event.xbutton.time);
 			motionPressed = (qboolean) (event.type == ButtonPress);
-			Com_QueueEvent(t, SE_KEY, K_MOUSE1, motionPressed, 0, NULL);
+			Com_QueueEvent(t, SE_KEY, (K_MOUSE1-1)+event.xbutton.button, motionPressed, 0, NULL);
 
 			break;
 

@@ -5196,13 +5196,13 @@ void _UI_MouseEvent( int dx, int dy )
 {
 	//printf(__FILE__ "_UI_MouseEvent(%d,%d)\n", dx, dy);
 	// update mouse screen position
-	uiInfo.uiDC.cursorx = dx - (uiInfo.uiDC.glconfig.vidWidth - SCREEN_WIDTH) / 2;
+	uiInfo.uiDC.cursorx += dx;
 	if (uiInfo.uiDC.cursorx < 0)
 		uiInfo.uiDC.cursorx = 0;
 	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH)
 		uiInfo.uiDC.cursorx = SCREEN_WIDTH;
 
-	uiInfo.uiDC.cursory = dy - (uiInfo.uiDC.glconfig.vidHeight - SCREEN_HEIGHT) / 2);
+	uiInfo.uiDC.cursory += dy;
 	if (uiInfo.uiDC.cursory < 0)
 		uiInfo.uiDC.cursory = 0;
 	else if (uiInfo.uiDC.cursory > SCREEN_HEIGHT)

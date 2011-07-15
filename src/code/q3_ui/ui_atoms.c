@@ -878,13 +878,13 @@ void UI_MouseEvent( int dx, int dy )
 		return;
 
 	// update mouse screen position
-	uis.cursorx = dx - (uis.glconfig.vidWidth - SCREEN_WIDTH) / 2;
+	uis.cursorx+= dx;
 	if (uis.cursorx < 0)
 		uis.cursorx = 0;
 	else if (uis.cursorx > SCREEN_WIDTH)
 		uis.cursorx = SCREEN_WIDTH;
 
-	uis.cursory = dy - (uis.glconfig.vidHeight - SCREEN_HEIGHT) / 2;
+	uis.cursory+= dy;
 	if (uis.cursory < 0)
 		uis.cursory = 0;
 	else if (uis.cursory > SCREEN_HEIGHT)
