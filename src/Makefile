@@ -305,7 +305,7 @@ ifeq ($(PLATFORM),linux)
   endif
   ifeq ($(ARCH),arm)
     BASE_CFLAGS += -DNOKIA
-    OPTIMIZE += -mfpu=neon
+    OPTIMIZE += -march=armv7-a -O2 -pipe
   endif
   endif
   endif
